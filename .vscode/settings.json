@@ -1,5 +1,8 @@
 {
 	"cSpell.words": [
-		"NEWUTS"
+		"NEWNS",
+		"NEWPID",
+		"NEWUTS",
+		"Unshareflags"
 	]
 }

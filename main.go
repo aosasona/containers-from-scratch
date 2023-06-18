@@ -5,8 +5,11 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strconv"
 	"syscall"
 )
 
@@ -44,6 +47,8 @@ func run() {
 func child () {
 	fmt.Printf("[CHILD] Running %v as %d\n", os.Args[2:], os.Getpid())
 
+	cg()
+
 	syscall.Sethostname([]byte("container"))
 	syscall.Chroot(ROOT_FS) 
 	syscall.Chdir("/")
@@ -62,6 +67,23 @@ func child () {
 
 	syscall.Unmount("proc", 0)
 }
+
+func cg() {
+	// the following code creates a new cgroup for the container
+	// a cgroup is a linux feature that allows us to limit the resources used by a process or group of processes
+	cgroups := "/sys/fs/cgroup/"
+	pids := filepath.Join(cgroups, "pids")
+	err := os.Mkdir(filepath.Join(pids, "trulyao"), 0755)
+	if err != nil && !os.IsExist(err) {
+		panic(err)
+	}
+	must(ioutil.WriteFile(filepath.Join(pids, "trulyao/pids.max"), []byte("20"), 0700))
+	
+	// This part removes the new cgroup in place after the container exits
+	must(ioutil.WriteFile(filepath.Join(pids, "trulyao/notify_on_release"), []byte("1"), 0700))
+	must(ioutil.WriteFile(filepath.Join(pids, "trulyao/cgroup.procs"), []byte(strconv.Itoa(os.Getpid())), 0700))
+}
+
 func must(err error) {
 	if err != nil {
 		panic(err)
